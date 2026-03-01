@@ -14,8 +14,8 @@ import (
 )
 
 type TranscriptService interface {
-	GetTranscripts(videoID string, langauges []string, preserve_formatting bool) ([]yt_transcript_models.Transcript, error)
-	GetTranscriptsWithContext(ctx context.Context, videoID string, langauges []string, preserve_formatting bool) ([]yt_transcript_models.Transcript, error)
+	GetTranscripts(videoID string, languages []string, preserveFormatting bool) ([]yt_transcript_models.Transcript, error)
+	GetTranscriptsWithContext(ctx context.Context, videoID string, languages []string, preserveFormatting bool) ([]yt_transcript_models.Transcript, error)
 }
 
 type transcriptService struct {
@@ -33,35 +33,34 @@ func NewTranscriptService(fetcher repository.HTMLFetcherType) *transcriptService
 	}
 }
 
-func (t transcriptService) GetTranscripts(videoID string, languages []string, preserve_formatting bool) ([]yt_transcript_models.Transcript, error) {
-	return t.GetTranscriptsWithContext(context.Background(), videoID, languages, preserve_formatting)
+func (t transcriptService) GetTranscripts(videoID string, languages []string, preserveFormatting bool) ([]yt_transcript_models.Transcript, error) {
+	return t.GetTranscriptsWithContext(context.Background(), videoID, languages, preserveFormatting)
 }
 
-func (t transcriptService) GetTranscriptsWithContext(ctx context.Context, videoID string, languages []string, preserve_formatting bool) ([]yt_transcript_models.Transcript, error) {
+func (t transcriptService) GetTranscriptsWithContext(ctx context.Context, videoID string, languages []string, preserveFormatting bool) ([]yt_transcript_models.Transcript, error) {
 	videoID = sanitizeVideoId(videoID)
 
-	trascript_data, err := t.extractTranscriptList(ctx, videoID)
+	transcriptData, err := t.extractTranscriptList(ctx, videoID)
 	if err != nil {
-		return []yt_transcript_models.Transcript{}, fmt.Errorf("failed to extract list of transcripts: %w", err)
+		return nil, fmt.Errorf("failed to extract list of transcripts: %w", err)
 	}
 
-	transcripts, err := t.getTranscriptsForLanguage(languages, *trascript_data.Transcripts)
+	transcripts, err := t.getTranscriptsForLanguage(languages, *transcriptData.Transcripts)
 	if err != nil {
-		return []yt_transcript_models.Transcript{}, fmt.Errorf("failed to get transcript: %w", err)
+		return nil, fmt.Errorf("failed to get transcript: %w", err)
 	}
 
-	return t.processCaptionTracksWithContext(ctx, videoID, transcripts, trascript_data.Title, preserve_formatting)
+	return t.processCaptionTracksWithContext(ctx, videoID, transcripts, transcriptData.Title, preserveFormatting)
 }
 
-func (t *transcriptService) processCaptionTracks(video_id string, captionTracks []yt_transcript_models.CaptionTrack, title string, preserve_formatting bool) ([]yt_transcript_models.Transcript, error) {
-	return t.processCaptionTracksWithContext(context.Background(), video_id, captionTracks, title, preserve_formatting)
+func (t *transcriptService) processCaptionTracks(videoID string, captionTracks []yt_transcript_models.CaptionTrack, title string, preserveFormatting bool) ([]yt_transcript_models.Transcript, error) {
+	return t.processCaptionTracksWithContext(context.Background(), videoID, captionTracks, title, preserveFormatting)
 }
 
-func (t *transcriptService) processCaptionTracksWithContext(ctx context.Context, video_id string, captionTracks []yt_transcript_models.CaptionTrack, title string, preserve_formatting bool) ([]yt_transcript_models.Transcript, error) {
+func (t *transcriptService) processCaptionTracksWithContext(ctx context.Context, videoID string, captionTracks []yt_transcript_models.CaptionTrack, title string, preserveFormatting bool) ([]yt_transcript_models.Transcript, error) {
 	resultChan := make(chan transcriptResult, len(captionTracks))
 	var wg sync.WaitGroup
 
-	// Pre-allocate results slice with known capacity
 	results := make([]yt_transcript_models.Transcript, 0, len(captionTracks))
 
 	for _, transcript := range captionTracks {
@@ -69,28 +68,23 @@ func (t *transcriptService) processCaptionTracksWithContext(ctx context.Context,
 		go func(tr yt_transcript_models.CaptionTrack) {
 			defer wg.Done()
 
-			is_generated := false
-			if tr.Kind != nil && *tr.Kind == "asr" {
-				is_generated = true
-			}
+			isGenerated := tr.Kind != nil && *tr.Kind == "asr"
 
-			lines, err := t.getTranscriptFromTrackWithContext(ctx, tr, preserve_formatting)
+			lines, err := t.getTranscriptFromTrackWithContext(ctx, tr, preserveFormatting)
 			if err != nil {
 				resultChan <- transcriptResult{err: fmt.Errorf("error getting transcript from track: %w", err)}
 				return
 			}
 
-			result := yt_transcript_models.Transcript{
-				VideoID:        video_id,
+			resultChan <- transcriptResult{transcript: yt_transcript_models.Transcript{
+				VideoID:        videoID,
 				VideoTitle:     title,
 				Language:       tr.Name.SimpleText,
 				LanguageCode:   tr.LanguageCode,
-				IsGenerated:    is_generated,
+				IsGenerated:    isGenerated,
 				IsTranslatable: tr.IsTranslatable,
 				Lines:          lines,
-			}
-
-			resultChan <- transcriptResult{transcript: result}
+			}}
 		}(transcript)
 	}
 
@@ -101,8 +95,7 @@ func (t *transcriptService) processCaptionTracksWithContext(ctx context.Context,
 
 	for result := range resultChan {
 		if result.err != nil {
-			fmt.Printf("Error processing transcript: %v\n", result.err)
-			return results, result.err
+			return nil, result.err
 		}
 		results = append(results, result.transcript)
 	}
@@ -113,17 +106,14 @@ func (t *transcriptService) processCaptionTracksWithContext(ctx context.Context,
 var innerTubeApiKeyRegex = regexp.MustCompile(`"INNERTUBE_API_KEY":\s*"([a-zA-Z0-9_-]+)"`)
 
 func extractInnerTubeApiKey(htmlContent string) string {
-	// Search for the pattern in the HTML content
 	match := innerTubeApiKeyRegex.FindStringSubmatch(htmlContent)
 	if len(match) == 2 {
 		return match[1]
 	}
-
 	return ""
 }
 
 func extractInnertubeVideoDetails(data map[string]interface{}) (*yt_transcript_models.InnertubeData, error) {
-	// Extract captions section directly
 	captions, ok := data["captions"].(map[string]interface{})
 	if !ok {
 		return nil, fmt.Errorf("captions not found in response")
@@ -134,7 +124,6 @@ func extractInnertubeVideoDetails(data map[string]interface{}) (*yt_transcript_m
 		return nil, fmt.Errorf("playerCaptionsTracklistRenderer not found")
 	}
 
-	// Extract caption tracks
 	var captionTracks []yt_transcript_models.CaptionTrack
 	if tracks, ok := renderer["captionTracks"].([]interface{}); ok {
 		captionTracks = make([]yt_transcript_models.CaptionTrack, 0, len(tracks))
@@ -169,7 +158,6 @@ func extractInnertubeVideoDetails(data map[string]interface{}) (*yt_transcript_m
 		}
 	}
 
-	// Extract translation languages if available
 	var translationLanguages *[]yt_transcript_models.LanguageData
 	if transLangs, ok := renderer["translationLanguages"].([]interface{}); ok {
 		langs := make([]yt_transcript_models.LanguageData, 0, len(transLangs))
@@ -210,7 +198,6 @@ func extractInnertubeVideoDetails(data map[string]interface{}) (*yt_transcript_m
 func extractTitle(htmlContent string) string {
 	doc, err := html.Parse(strings.NewReader(htmlContent))
 	if err != nil {
-		fmt.Printf("Error fetching the title")
 		return ""
 	}
 
@@ -232,25 +219,24 @@ func extractTitle(htmlContent string) string {
 	return title
 }
 
-func (t *transcriptService) extractTranscriptList(ctx context.Context, video_id string) (*yt_transcript_models.VideoTranscriptData, error) {
-	html, err := t.fetcher.FetchVideo(video_id)
+func (t *transcriptService) extractTranscriptList(ctx context.Context, videoID string) (*yt_transcript_models.VideoTranscriptData, error) {
+	htmlBytes, err := t.fetcher.FetchVideo(videoID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch video page: %w", err)
 	}
 
-	body := string(html)
+	body := string(htmlBytes)
 
 	title := extractTitle(body)
 
-	innertube_api_key := extractInnerTubeApiKey(body)
+	innertubeAPIKey := extractInnerTubeApiKey(body)
 
-	innertube_data, err := t.fetcher.FetchInnertubeData(ctx, video_id, innertube_api_key, nil)
+	innertubeData, err := t.fetcher.FetchInnertubeData(ctx, videoID, innertubeAPIKey, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch video page: %w", err)
+		return nil, fmt.Errorf("failed to fetch innertube data: %w", err)
 	}
 
-	// Directly extract data without unnecessary marshal/unmarshal
-	videoDetails, err := extractInnertubeVideoDetails(innertube_data)
+	videoDetails, err := extractInnertubeVideoDetails(innertubeData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract video details: %w", err)
 	}
@@ -269,36 +255,35 @@ func (s transcriptService) getTranscriptsForLanguage(languages []string, transcr
 		return transcripts.CaptionTracks, nil
 	}
 
-	// Pre-allocate with capacity hint based on language count
-	caption_tracks := make([]yt_transcript_models.CaptionTrack, 0, len(languages))
+	captionTracks := make([]yt_transcript_models.CaptionTrack, 0, len(languages))
 
 	for _, lang := range languages {
 		for _, track := range transcripts.CaptionTracks {
 			if track.LanguageCode == lang {
-				caption_tracks = append(caption_tracks, track)
+				captionTracks = append(captionTracks, track)
 			}
 		}
 	}
 
-	if len(caption_tracks) == 0 {
-		return []yt_transcript_models.CaptionTrack{}, fmt.Errorf("no transcript found for languages %s", languages)
+	if len(captionTracks) == 0 {
+		return nil, fmt.Errorf("no transcript found for languages %s", languages)
 	}
 
-	return caption_tracks, nil
+	return captionTracks, nil
 }
 
-func (s transcriptService) getTranscriptFromTrackWithContext(ctx context.Context, track yt_transcript_models.CaptionTrack, preserve_formatting bool) ([]yt_transcript_models.TranscriptLine, error) {
-	url := strings.Replace(track.BaseUrl, "&fmt=srv3", "", -1)
-	body, err := s.fetcher.FetchWithContext(ctx, url, nil)
+func (s transcriptService) getTranscriptFromTrackWithContext(ctx context.Context, track yt_transcript_models.CaptionTrack, preserveFormatting bool) ([]yt_transcript_models.TranscriptLine, error) {
+	trackURL := strings.Replace(track.BaseUrl, "&fmt=srv3", "", -1)
+	body, err := s.fetcher.FetchWithContext(ctx, trackURL, nil)
 	if err != nil {
-		return []yt_transcript_models.TranscriptLine{}, fmt.Errorf("failed to fetch transcript: %w", err)
+		return nil, fmt.Errorf("failed to fetch transcript: %w", err)
 	}
 
-	parser := repository.NewTranscriptParser(preserve_formatting)
+	parser := repository.NewTranscriptParser(preserveFormatting)
 
 	transcript, err := parser.Parse(string(body))
 	if err != nil {
-		return []yt_transcript_models.TranscriptLine{}, fmt.Errorf("failed to parse transcript: %w", err)
+		return nil, fmt.Errorf("failed to parse transcript: %w", err)
 	}
 	return transcript, nil
 }
@@ -308,20 +293,16 @@ func sanitizeVideoId(videoID string) string {
 		if strings.Contains(videoID, "youtube.com") {
 			u, err := url.Parse(videoID)
 			if err != nil {
-				fmt.Println("Error parsing URL")
 				return videoID
 			}
 			return u.Query().Get("v")
 		} else if strings.Contains(videoID, "youtu.be") {
 			u, err := url.Parse(videoID)
 			if err != nil {
-				fmt.Println("Error parsing URL")
 				return videoID
 			}
-			// For youtu.be, the video ID is in the path
 			return strings.TrimPrefix(u.Path, "/")
 		}
-		fmt.Println("Warning: this doesn't look like a youtube video, we'll still try to process it.")
 	}
 	return videoID
 }

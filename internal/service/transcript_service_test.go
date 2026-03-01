@@ -59,11 +59,11 @@ func TestGetTranscripts(t *testing.T) {
 			},
 		},
 		{
-			name:          "No API Key",
+			name:          "Innertube fetch fails",
 			videoID:       "abc123",
 			videoTitle:    "Test Video",
 			languages:     []string{"en"},
-			mockVideoHTML: `<title>Test Video</title>`,
+			mockVideoHTML: `<title>Test Video</title>"INNERTUBE_API_KEY":"test_api_key"`,
 			expectedError: errors.New("failed to extract list of transcripts"),
 		},
 	}
@@ -76,7 +76,6 @@ func TestGetTranscripts(t *testing.T) {
 				fetcher.On("FetchVideo", mock.AnythingOfType("string")).Return([]byte(tt.mockVideoHTML), nil)
 
 				if tt.expectedError == nil {
-					// Mock the FetchInnertubeData call for successful case
 					mockInnertubeData := map[string]interface{}{
 						"captions": map[string]interface{}{
 							"playerCaptionsTracklistRenderer": map[string]interface{}{
@@ -92,15 +91,13 @@ func TestGetTranscripts(t *testing.T) {
 							},
 						},
 					}
-					fetcher.On("FetchInnertubeData", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(mockInnertubeData, nil)
+					fetcher.On("FetchInnertubeData", mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.Anything).Return(mockInnertubeData, nil)
 				} else {
-					// Mock failure case
-					fetcher.On("FetchInnertubeData", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(map[string]interface{}{}, errors.New("failed to fetch"))
+					fetcher.On("FetchInnertubeData", mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.Anything).Return(map[string]interface{}{}, errors.New("failed to fetch"))
 				}
 			}
 
 			if tt.mockTranscriptXML != "" {
-				// Mock the FetchWithContext call for transcript URL
 				fetcher.On("FetchWithContext", mock.Anything, "http://example.com/transcript", mock.Anything).Return([]byte(tt.mockTranscriptXML), nil)
 			}
 
@@ -142,7 +139,12 @@ func TestSanitizeVideoID(t *testing.T) {
 			expected: "dQw4w9WgXcQ",
 		},
 		{
-			name:     "Invalid URL",
+			name:     "Short youtu.be URL",
+			input:    "https://youtu.be/dQw4w9WgXcQ",
+			expected: "dQw4w9WgXcQ",
+		},
+		{
+			name:     "Non-YouTube URL is returned unchanged",
 			input:    "https://example.com/video",
 			expected: "https://example.com/video",
 		},
@@ -218,7 +220,7 @@ func TestProcessCaptionTracks(t *testing.T) {
 		results, err := service.processCaptionTracks("test123", captionTracks, "title", false)
 
 		assert.Error(t, err)
-		assert.Empty(t, results)
+		assert.Nil(t, results)
 		fetcher.AssertExpectations(t)
 	})
 }
@@ -269,7 +271,6 @@ func TestExtractTitle(t *testing.T) {
 			inputHTML:     `<html><body><title>Malformed Title</title></body></html>`,
 			expectedTitle: "Malformed Title",
 		},
-
 		{
 			name:          "Escaped characters in title",
 			inputHTML:     `<html><body><title>What&#39;s new in Go</title></body></html>`,

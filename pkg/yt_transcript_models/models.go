@@ -16,11 +16,6 @@ type TranscriptLine struct {
 	Duration float64 `json:"duration"`
 }
 
-type TranscriptList struct {
-	VideoID       string
-	CaptionTracks []CaptionTrack
-}
-
 type LanguageName struct {
 	SimpleText string `json:"simpleText"`
 }
@@ -41,11 +36,6 @@ type CaptionTrack struct {
 type TranscriptData struct {
 	CaptionTracks        []CaptionTrack  `json:"captionTracks"`
 	TranslationLanguages *[]LanguageData `json:"translationLanguages,omitempty"`
-}
-
-type VideoDetails struct {
-	PlayerCaptionsTracklistRenderer *TranscriptData `json:"playerCaptionsTracklistRenderer"`
-	Title                           string          `json:"title"`
 }
 
 type CaptionsDetails struct {

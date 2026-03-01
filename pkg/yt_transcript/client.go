@@ -17,8 +17,6 @@ type YtTranscriptClient struct {
 	Formatter         yt_transcript_formatters.Formatter
 }
 
-var preserve_formatting_default = false
-
 func NewClient(options ...Option) *YtTranscriptClient {
 
 	formatter := yt_transcript_formatters.NewJSONFormatter()
@@ -41,11 +39,11 @@ func NewClient(options ...Option) *YtTranscriptClient {
 	return client
 }
 
-func (c *YtTranscriptClient) GetFormattedTranscripts(videoID string, languages []string, preserve_formatting bool) (string, error) {
+func (c *YtTranscriptClient) GetFormattedTranscripts(videoID string, languages []string, preserveFormatting bool) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(c.Timeout)*time.Second)
 	defer cancel()
 
-	transcripts, err := c.transcriptService.GetTranscriptsWithContext(ctx, videoID, languages, preserve_formatting)
+	transcripts, err := c.transcriptService.GetTranscriptsWithContext(ctx, videoID, languages, preserveFormatting)
 	if err != nil {
 		return "", err
 	}

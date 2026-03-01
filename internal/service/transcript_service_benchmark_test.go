@@ -13,7 +13,6 @@ func BenchmarkProcessCaptionTracks(b *testing.B) {
 	fetcher := &fixtures.MockHTMLFetcher{}
 	service := NewTranscriptService(fetcher)
 
-	// Create multiple caption tracks to simulate real usage
 	captionTracks := make([]yt_transcript_models.CaptionTrack, 5)
 	for i := 0; i < 5; i++ {
 		captionTracks[i] = yt_transcript_models.CaptionTrack{
@@ -32,7 +31,6 @@ func BenchmarkProcessCaptionTracks(b *testing.B) {
 		<text start="4" dur="1">Final line</text>
 	</transcript>`
 
-	// Mock all the fetch calls
 	fetcher.On("FetchWithContext", mock.Anything, mock.Anything, mock.Anything).Return([]byte(mockXML), nil)
 
 	b.ResetTimer()
@@ -44,16 +42,16 @@ func BenchmarkProcessCaptionTracks(b *testing.B) {
 	}
 }
 
-func BenchmarkRegexCompilation(b *testing.B) {
+func BenchmarkParseWithFormatting(b *testing.B) {
 	xmlContent := `<?xml version="1.0" encoding="utf-8" ?><transcript>
-		<text start="0" dur="1"><b>Bold text</b> and <i>italic text</i> with <strong>strong text</strong></text>
+		<text start="0" dur="1">&lt;b&gt;Bold text&lt;/b&gt; and &lt;i&gt;italic text&lt;/i&gt; with &lt;strong&gt;strong text&lt;/strong&gt;</text>
 		<text start="1" dur="1">Regular text</text>
 	</transcript>`
 
+	parser := repository.NewTranscriptParser(true)
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		// Test the optimized regex compilation via parsing
-		parser := repository.NewTranscriptParser(true)
 		_, err := parser.Parse(xmlContent)
 		if err != nil {
 			b.Fatal(err)
@@ -62,7 +60,6 @@ func BenchmarkRegexCompilation(b *testing.B) {
 }
 
 func BenchmarkExtractInnertubeVideoDetails(b *testing.B) {
-	// Sample data structure similar to what YouTube returns
 	mockData := map[string]interface{}{
 		"captions": map[string]interface{}{
 			"playerCaptionsTracklistRenderer": map[string]interface{}{
@@ -93,4 +90,3 @@ func BenchmarkExtractInnertubeVideoDetails(b *testing.B) {
 		}
 	}
 }
-

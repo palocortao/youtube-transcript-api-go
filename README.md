@@ -39,13 +39,13 @@ yt_transcript [flags] VIDEO_ID
         Comma-separated list of language codes (default "en")
   -formatter string
         Formatter to use (json, text) (default "json")
-  -preserve_formatting
+  -preserve-formatting
         Preserve formatting (default true)
-  -with_timestamps
+  -with-timestamps
         Include timestamps (default true)
-  -exclude_manually_created
+  -exclude-manually-created
         Exclude manually created subtitles
-  -exclude_auto_generated
+  -exclude-auto-generated
         Exclude auto-generated subtitles
 ```
 
@@ -62,7 +62,7 @@ yt_transcript "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 yt_transcript -languages es -formatter text u6aZYZv3duo
 
 # Get transcripts without timestamps
-yt_transcript -with_timestamps=false dQw4w9WgXcQ
+yt_transcript -with-timestamps=false dQw4w9WgXcQ
 ```
 
 ## Library Usage

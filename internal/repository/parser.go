@@ -6,61 +6,26 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/horiagug/youtube-transcript-api-go/pkg/yt_transcript_models"
 )
 
 type transcriptParser struct {
-	htmlRegex *regexp.Regexp
+	preserveFormatting bool
 }
 
 var formattingTags = []string{
 	"strong", "em", "b", "i", "mark", "small", "del", "ins", "sub", "sup",
 }
 
-// Pre-compiled regex patterns for better performance
-var (
-	htmlRegex     = regexp.MustCompile(`(?i)<[^>]*>`)
-	regexCache    = make(map[string]*regexp.Regexp)
-	regexCacheMu  sync.RWMutex
-)
+var stripHTMLRegex = regexp.MustCompile(`(?i)<[^>]*>`)
 
 func NewTranscriptParser(preserveFormatting bool) *transcriptParser {
-	htmlRegex := getHTMLRegex(preserveFormatting)
-	return &transcriptParser{htmlRegex: htmlRegex}
-}
-
-func getHTMLRegex(preserveFormatting bool) *regexp.Regexp {
-	if preserveFormatting {
-		// Use cached regex or compile and cache it
-		cacheKey := "formatting_" + strings.Join(formattingTags, "|")
-		
-		regexCacheMu.RLock()
-		if regex, exists := regexCache[cacheKey]; exists {
-			regexCacheMu.RUnlock()
-			return regex
-		}
-		regexCacheMu.RUnlock()
-		
-		regexCacheMu.Lock()
-		defer regexCacheMu.Unlock()
-		
-		// Double-check after acquiring write lock
-		if regex, exists := regexCache[cacheKey]; exists {
-			return regex
-		}
-		
-		formatsRegex := `</?(?:` + strings.Join(formattingTags, "|") + `)\b[^>]*>`
-		regex := regexp.MustCompile(`(?i)<[^>]*>(?:(?i)` + formatsRegex + `)?`)
-		regexCache[cacheKey] = regex
-		return regex
-	}
-	return htmlRegex
+	return &transcriptParser{preserveFormatting: preserveFormatting}
 }
 
 func cleanHTML(text string, preserveFormatting bool) string {
-	cleaned := htmlRegex.ReplaceAllString(text, "")
+	cleaned := stripHTMLRegex.ReplaceAllString(text, "")
 
 	if preserveFormatting {
 		for _, tag := range formattingTags {
@@ -90,7 +55,7 @@ func (p *transcriptParser) Parse(plainData string) ([]yt_transcript_models.Trans
 
 	var results []yt_transcript_models.TranscriptLine
 	for _, entry := range parsedXML.Texts {
-		text := cleanHTML(entry.Text, false)
+		text := cleanHTML(entry.Text, p.preserveFormatting)
 		text = html.UnescapeString(text)
 
 		start, err := strconv.ParseFloat(entry.Start, 64)

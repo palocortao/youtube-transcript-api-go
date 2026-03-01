@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-var video_base_url = "https://www.youtube.com/watch?v=%s"
+var videoBaseUrl = "https://www.youtube.com/watch?v=%s"
 
 const INNERTUBE_API_URL = "https://www.youtube.com/youtubei/v1/player?key=%s"
 
@@ -21,6 +21,11 @@ var INNERTUBE_CONTEXT = map[string]interface{}{
 		"clientVersion": "20.10.38",
 	},
 }
+
+var (
+	consentURLRegex   = regexp.MustCompile(`https://consent\.youtube\.com/s`)
+	consentValueRegex = regexp.MustCompile(`name="v" value="(.*?)"`)
+)
 
 type HTMLFetcherType interface {
 	Fetch(url string, cookie *http.Cookie) ([]byte, error)
@@ -51,10 +56,13 @@ func (f *HTMLFetcher) Fetch(url string, cookie *http.Cookie) ([]byte, error) {
 }
 
 func (f *HTMLFetcher) FetchWithContext(ctx context.Context, url string, cookie *http.Cookie) ([]byte, error) {
-	var body []byte
-	var err error
+	var lastErr error
 
-	for i := range 3 {
+	for range 3 {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+
 		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create request: %w", err)
@@ -67,52 +75,52 @@ func (f *HTMLFetcher) FetchWithContext(ctx context.Context, url string, cookie *
 
 		resp, err := sharedHTTPClient.Do(req)
 		if err != nil {
-			fmt.Printf("Retry %d: failed to fetch: %v\n", i+1, err)
-			time.Sleep(2 * time.Second) // Wait before retrying
-			continue
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			fmt.Printf("Retry %d: received non-OK status code: %d\n", i+1, resp.StatusCode)
+			lastErr = err
 			time.Sleep(2 * time.Second)
 			continue
 		}
 
-		body, err = io.ReadAll(resp.Body)
+		if resp.StatusCode != http.StatusOK {
+			resp.Body.Close()
+			lastErr = fmt.Errorf("non-OK status code: %d", resp.StatusCode)
+			time.Sleep(2 * time.Second)
+			continue
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
 		if err != nil {
-			fmt.Printf("Retry %d: failed to read response body: %v\n", i+1, err)
+			lastErr = err
 			time.Sleep(2 * time.Second)
 			continue
 		}
 
 		if len(body) > 0 {
-			return body, nil // Success
+			return body, nil
 		}
 
-		fmt.Printf("Retry %d: empty response body\n", i+1)
+		lastErr = fmt.Errorf("empty response body")
 		time.Sleep(2 * time.Second)
 	}
 
-	return nil, fmt.Errorf("failed to fetch after retries: %w", err)
+	return nil, fmt.Errorf("failed to fetch after retries: %w", lastErr)
 }
 
 func (f *HTMLFetcher) FetchVideo(videoID string) ([]byte, error) {
-	video_url := fmt.Sprintf(video_base_url, videoID)
+	videoURL := fmt.Sprintf(videoBaseUrl, videoID)
 
-	body, err := f.Fetch(video_url, nil)
+	body, err := f.Fetch(videoURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch video page: %w", err)
 	}
 
 	if consentRequired(body) {
-		fmt.Println("Consent required, attempting to set cookie and retry")
-		cookie, err := f.createConsentCookie(video_url)
+		cookie, err := f.createConsentCookie(videoURL)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create consent cookie: %w", err)
 		}
 
-		body, err = f.Fetch(video_url, cookie) // Retry fetch with cookie
+		body, err = f.Fetch(videoURL, cookie)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch video page after setting consent: %w", err)
 		}
@@ -121,35 +129,30 @@ func (f *HTMLFetcher) FetchVideo(videoID string) ([]byte, error) {
 	return body, nil
 }
 
-func (f *HTMLFetcher) createConsentCookie(videoID string) (*http.Cookie, error) {
-	html, err := f.Fetch(videoID, nil)
+func (f *HTMLFetcher) createConsentCookie(videoURL string) (*http.Cookie, error) {
+	html, err := f.Fetch(videoURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch HTML to extract consent value: %w", err)
 	}
 
-	re := regexp.MustCompile(`name="v" value="(.*?)"`)
-	match := re.FindSubmatch(html)
+	match := consentValueRegex.FindSubmatch(html)
 	if len(match) < 2 {
 		return nil, fmt.Errorf("failed to find consent value in HTML")
 	}
-	consentValue := string(match[1])
 
-	cookieValue := "YES+" + consentValue
 	cookie := &http.Cookie{
 		Name:   "CONSENT",
-		Value:  cookieValue,
+		Value:  "YES+" + string(match[1]),
 		Domain: ".youtube.com",
 	}
 	return cookie, nil
 }
 
 func consentRequired(body []byte) bool {
-	consentRegex := regexp.MustCompile(`https://consent\.youtube\.com/s`)
-	return consentRegex.Match(body)
+	return consentURLRegex.Match(body)
 }
 
 func (f *HTMLFetcher) FetchInnertubeData(ctx context.Context, videoID string, apiKey string, cookie *http.Cookie) (map[string]interface{}, error) {
-
 	url := fmt.Sprintf(INNERTUBE_API_URL, apiKey)
 
 	payload := map[string]interface{}{
@@ -187,7 +190,6 @@ func (f *HTMLFetcher) FetchInnertubeData(ctx context.Context, videoID string, ap
 	}
 
 	if consentRequired(body) && cookie == nil {
-
 		cookie, err := f.createConsentCookie(videoID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create consent cookie: %w", err)
@@ -201,8 +203,7 @@ func (f *HTMLFetcher) FetchInnertubeData(ctx context.Context, videoID string, ap
 	}
 
 	var responseData map[string]interface{}
-	err = json.Unmarshal(body, &responseData)
-	if err != nil {
+	if err = json.Unmarshal(body, &responseData); err != nil {
 		return nil, fmt.Errorf("failed to decode response JSON: %w", err)
 	}
 
