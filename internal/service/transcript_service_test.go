@@ -46,7 +46,7 @@ func TestGetTranscripts(t *testing.T) {
 					VideoTitle:     "Test Video",
 					Language:       "English",
 					LanguageCode:   "en",
-					IsGenerated:    false,
+					IsGenerated:    true,
 					IsTranslatable: true,
 					Lines: []yt_transcript_models.TranscriptLine{
 						{
