@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"regexp"
 	"time"
+
+	"github.com/horiagug/youtube-transcript-api-go/internal/logging"
 )
 
 var videoBaseUrl = "https://www.youtube.com/watch?v=%s"
@@ -56,12 +58,15 @@ func (f *HTMLFetcher) Fetch(url string, cookie *http.Cookie) ([]byte, error) {
 }
 
 func (f *HTMLFetcher) FetchWithContext(ctx context.Context, url string, cookie *http.Cookie) ([]byte, error) {
+	logger := logging.FromContext(ctx)
 	var lastErr error
 
-	for range 3 {
+	for attempt := range 3 {
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
+
+		logger.DebugContext(ctx, "fetching URL", "url", url, "attempt", attempt+1)
 
 		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 		if err != nil {
@@ -76,6 +81,7 @@ func (f *HTMLFetcher) FetchWithContext(ctx context.Context, url string, cookie *
 		resp, err := sharedHTTPClient.Do(req)
 		if err != nil {
 			lastErr = err
+			logger.DebugContext(ctx, "request failed, retrying", "url", url, "attempt", attempt+1, "error", err)
 			time.Sleep(2 * time.Second)
 			continue
 		}
@@ -83,6 +89,7 @@ func (f *HTMLFetcher) FetchWithContext(ctx context.Context, url string, cookie *
 		if resp.StatusCode != http.StatusOK {
 			resp.Body.Close()
 			lastErr = fmt.Errorf("non-OK status code: %d", resp.StatusCode)
+			logger.DebugContext(ctx, "non-OK response, retrying", "url", url, "attempt", attempt+1, "status", resp.StatusCode)
 			time.Sleep(2 * time.Second)
 			continue
 		}
@@ -91,6 +98,7 @@ func (f *HTMLFetcher) FetchWithContext(ctx context.Context, url string, cookie *
 		resp.Body.Close()
 		if err != nil {
 			lastErr = err
+			logger.DebugContext(ctx, "failed to read body, retrying", "url", url, "attempt", attempt+1, "error", err)
 			time.Sleep(2 * time.Second)
 			continue
 		}
@@ -100,9 +108,11 @@ func (f *HTMLFetcher) FetchWithContext(ctx context.Context, url string, cookie *
 		}
 
 		lastErr = fmt.Errorf("empty response body")
+		logger.DebugContext(ctx, "empty response body, retrying", "url", url, "attempt", attempt+1)
 		time.Sleep(2 * time.Second)
 	}
 
+	logger.WarnContext(ctx, "all retries exhausted", "url", url, "error", lastErr)
 	return nil, fmt.Errorf("failed to fetch after retries: %w", lastErr)
 }
 
@@ -115,6 +125,7 @@ func (f *HTMLFetcher) FetchVideo(videoID string) ([]byte, error) {
 	}
 
 	if consentRequired(body) {
+		logging.FromContext(context.Background()).Debug("consent required, creating consent cookie", "videoID", videoID)
 		cookie, err := f.createConsentCookie(videoURL)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create consent cookie: %w", err)

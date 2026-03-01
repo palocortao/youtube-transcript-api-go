@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"testing"
 
 	"github.com/horiagug/youtube-transcript-api-go/internal/repository"
@@ -35,7 +36,7 @@ func BenchmarkProcessCaptionTracks(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := service.processCaptionTracks("test123", captionTracks, "Test Video", false)
+		_, err := service.processCaptionTracks(context.Background(), "test123", captionTracks, "Test Video", false)
 		if err != nil {
 			b.Fatal(err)
 		}

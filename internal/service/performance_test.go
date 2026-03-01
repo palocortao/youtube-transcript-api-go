@@ -49,7 +49,7 @@ func TestContextTimeoutRespected(t *testing.T) {
 	defer cancel()
 
 	start := time.Now()
-	_, err := service.GetTranscriptsWithContext(ctx, "test123", []string{"en"}, false)
+	_, err := service.GetTranscripts(ctx, "test123", []string{"en"}, false)
 	elapsed := time.Since(start)
 
 	assert.Error(t, err)

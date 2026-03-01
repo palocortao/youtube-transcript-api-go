@@ -1,13 +1,22 @@
 package errors
 
-type TranscriptError string
+import "fmt"
 
-func (e TranscriptError) Error() string {
-	return string(e)
+// NoTranscriptFoundError is returned when none of the requested languages have a transcript.
+type NoTranscriptFoundError struct {
+	Languages []string // requested language codes
+	Available []string // actually available language codes
 }
 
-const (
-	ErrNoTranscript    = TranscriptError("no transcript found")
-	ErrInvalidVideoID  = TranscriptError("invalid video ID")
-	ErrTooManyRequests = TranscriptError("too many requests")
-)
+func (e *NoTranscriptFoundError) Error() string {
+	return fmt.Sprintf("no transcript found for %v; available: %v", e.Languages, e.Available)
+}
+
+// TranscriptsDisabledError is returned when a video has no captions at all.
+type TranscriptsDisabledError struct {
+	VideoID string
+}
+
+func (e *TranscriptsDisabledError) Error() string {
+	return fmt.Sprintf("transcripts are disabled for video %q", e.VideoID)
+}

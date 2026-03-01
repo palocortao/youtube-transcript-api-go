@@ -1,6 +1,8 @@
 package yt_transcript
 
 import (
+	"log/slog"
+
 	"github.com/horiagug/youtube-transcript-api-go/internal/repository"
 	"github.com/horiagug/youtube-transcript-api-go/internal/service"
 	"github.com/horiagug/youtube-transcript-api-go/pkg/yt_transcript_formatters"
@@ -19,8 +21,15 @@ func WithTimeout(seconds int) Option {
 		c.Timeout = seconds
 	}
 }
+
 func WithFormatter(formatter yt_transcript_formatters.Formatter) Option {
 	return func(c *YtTranscriptClient) {
 		c.Formatter = formatter
+	}
+}
+
+func WithLogger(logger *slog.Logger) Option {
+	return func(c *YtTranscriptClient) {
+		c.logger = logger
 	}
 }

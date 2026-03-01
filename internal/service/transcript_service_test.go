@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -13,8 +14,8 @@ import (
 
 func TestNewTranscriptService(t *testing.T) {
 	fetcher := &fixtures.MockHTMLFetcher{}
-	service := NewTranscriptService(fetcher)
-	assert.NotNil(t, service, "Service should not be nil")
+	svc := NewTranscriptService(fetcher)
+	assert.NotNil(t, svc, "Service should not be nil")
 }
 
 func TestGetTranscripts(t *testing.T) {
@@ -102,7 +103,7 @@ func TestGetTranscripts(t *testing.T) {
 			}
 
 			service := NewTranscriptService(fetcher)
-			result, err := service.GetTranscripts(tt.videoID, tt.languages, tt.preserveFormatting)
+			result, err := service.GetTranscripts(context.Background(), tt.videoID, tt.languages, tt.preserveFormatting)
 
 			if tt.expectedError != nil {
 				assert.Error(t, err)
@@ -185,7 +186,7 @@ func TestProcessCaptionTracks(t *testing.T) {
 		fetcher.On("FetchWithContext", mock.Anything, "http://example.com/en", mock.Anything).Return([]byte(mockXML), nil)
 		fetcher.On("FetchWithContext", mock.Anything, "http://example.com/es", mock.Anything).Return([]byte(mockXML), nil)
 
-		results, err := service.processCaptionTracks("test123", captionTracks, "title", false)
+		results, err := service.processCaptionTracks(context.Background(), "test123", captionTracks, "title", false)
 
 		assert.NoError(t, err)
 		assert.Len(t, results, 2)
@@ -217,7 +218,7 @@ func TestProcessCaptionTracks(t *testing.T) {
 		fetcher.On("FetchWithContext", mock.Anything, "http://example.com/en", mock.Anything).
 			Return([]byte{}, errors.New("failed to fetch"))
 
-		results, err := service.processCaptionTracks("test123", captionTracks, "title", false)
+		results, err := service.processCaptionTracks(context.Background(), "test123", captionTracks, "title", false)
 
 		assert.Error(t, err)
 		assert.Nil(t, results)
