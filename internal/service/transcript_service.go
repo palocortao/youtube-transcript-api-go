@@ -267,7 +267,11 @@ func (s transcriptService) getTranscriptsForLanguage(languages []string, transcr
 		for _, track := range transcripts.CaptionTracks {
 			if track.LanguageCode == lang {
 				captionTracks = append(captionTracks, track)
+				break //XXX Rob: Break to keep the first of the lang arrays
 			}
+		}
+		if len(captionTracks) > 0 {
+			break
 		}
 	}
 
