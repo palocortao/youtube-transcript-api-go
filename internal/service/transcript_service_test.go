@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
-	"github.com/horiagug/youtube-transcript-api-go/internal/repository/fixtures"
-	"github.com/horiagug/youtube-transcript-api-go/pkg/yt_transcript_models"
+	"github.com/palocortao/youtube-transcript-api-go/internal/repository/fixtures"
+	"github.com/palocortao/youtube-transcript-api-go/pkg/yt_transcript_models"
 )
 
 func TestNewTranscriptService(t *testing.T) {

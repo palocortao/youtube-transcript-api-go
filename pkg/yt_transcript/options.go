@@ -3,9 +3,9 @@ package yt_transcript
 import (
 	"log/slog"
 
-	"github.com/horiagug/youtube-transcript-api-go/internal/repository"
-	"github.com/horiagug/youtube-transcript-api-go/internal/service"
-	"github.com/horiagug/youtube-transcript-api-go/pkg/yt_transcript_formatters"
+	"github.com/palocortao/youtube-transcript-api-go/internal/repository"
+	"github.com/palocortao/youtube-transcript-api-go/internal/service"
+	"github.com/palocortao/youtube-transcript-api-go/pkg/yt_transcript_formatters"
 )
 
 type Option func(*YtTranscriptClient)

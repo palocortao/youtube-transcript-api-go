@@ -3,7 +3,7 @@ package yt_transcript_formatters
 import (
 	"encoding/json"
 
-	"github.com/horiagug/youtube-transcript-api-go/pkg/yt_transcript_models"
+	"github.com/palocortao/youtube-transcript-api-go/pkg/yt_transcript_models"
 )
 
 type JSONTranscriptLine struct {

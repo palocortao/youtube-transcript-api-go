@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/horiagug/youtube-transcript-api-go/internal/logging"
+	"github.com/palocortao/youtube-transcript-api-go/internal/logging"
 )
 
 var videoBaseUrl = "https://www.youtube.com/watch?v=%s"

@@ -9,10 +9,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/horiagug/youtube-transcript-api-go/internal/logging"
-	"github.com/horiagug/youtube-transcript-api-go/internal/repository"
-	ytErrors "github.com/horiagug/youtube-transcript-api-go/pkg/errors"
-	"github.com/horiagug/youtube-transcript-api-go/pkg/yt_transcript_models"
+	"github.com/palocortao/youtube-transcript-api-go/internal/logging"
+	"github.com/palocortao/youtube-transcript-api-go/internal/repository"
+	ytErrors "github.com/palocortao/youtube-transcript-api-go/pkg/errors"
+	"github.com/palocortao/youtube-transcript-api-go/pkg/yt_transcript_models"
 	"golang.org/x/net/html"
 )
 

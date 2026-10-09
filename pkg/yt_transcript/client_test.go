@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/palocortao/youtube-transcript-api-go/internal/logging"
+	"github.com/palocortao/youtube-transcript-api-go/pkg/yt_transcript_formatters"
+	"github.com/palocortao/youtube-transcript-api-go/pkg/yt_transcript_models"
 	"github.com/stretchr/testify/assert"
-	"github.com/horiagug/youtube-transcript-api-go/internal/logging"
-	"github.com/horiagug/youtube-transcript-api-go/pkg/yt_transcript_formatters"
-	"github.com/horiagug/youtube-transcript-api-go/pkg/yt_transcript_models"
 )
 
 // mockService captures calls made to it for assertion.

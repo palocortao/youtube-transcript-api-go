@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/horiagug/youtube-transcript-api-go/internal/repository"
-	"github.com/horiagug/youtube-transcript-api-go/internal/repository/fixtures"
-	"github.com/horiagug/youtube-transcript-api-go/pkg/yt_transcript_models"
+	"github.com/palocortao/youtube-transcript-api-go/internal/repository"
+	"github.com/palocortao/youtube-transcript-api-go/internal/repository/fixtures"
+	"github.com/palocortao/youtube-transcript-api-go/pkg/yt_transcript_models"
 	"github.com/stretchr/testify/mock"
 )
 

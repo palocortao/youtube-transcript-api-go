@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/horiagug/youtube-transcript-api-go/pkg/yt_transcript_models"
+	"github.com/palocortao/youtube-transcript-api-go/pkg/yt_transcript_models"
 )
 
 type TextFormatter struct {

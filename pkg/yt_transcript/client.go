@@ -7,11 +7,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/horiagug/youtube-transcript-api-go/internal/logging"
-	"github.com/horiagug/youtube-transcript-api-go/internal/repository"
-	"github.com/horiagug/youtube-transcript-api-go/internal/service"
-	"github.com/horiagug/youtube-transcript-api-go/pkg/yt_transcript_formatters"
-	"github.com/horiagug/youtube-transcript-api-go/pkg/yt_transcript_models"
+	"github.com/palocortao/youtube-transcript-api-go/internal/logging"
+	"github.com/palocortao/youtube-transcript-api-go/internal/repository"
+	"github.com/palocortao/youtube-transcript-api-go/internal/service"
+	"github.com/palocortao/youtube-transcript-api-go/pkg/yt_transcript_formatters"
+	"github.com/palocortao/youtube-transcript-api-go/pkg/yt_transcript_models"
 )
 
 type YtTranscriptClient struct {
@@ -26,9 +26,9 @@ func NewClient(options ...Option) *YtTranscriptClient {
 	formatter.Configure(yt_transcript_formatters.WithPrettyPrint(true))
 
 	client := &YtTranscriptClient{
-		Timeout: 30,
+		Timeout:   30,
 		Formatter: formatter,
-		logger:  slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError})),
+		logger:    slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError})),
 	}
 
 	for _, opt := range options {

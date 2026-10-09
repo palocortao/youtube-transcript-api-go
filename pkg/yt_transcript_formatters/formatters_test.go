@@ -3,8 +3,8 @@ package yt_transcript_formatters
 import (
 	"testing"
 
+	"github.com/palocortao/youtube-transcript-api-go/pkg/yt_transcript_models"
 	"github.com/stretchr/testify/assert"
-	"github.com/horiagug/youtube-transcript-api-go/pkg/yt_transcript_models"
 )
 
 var sampleTranscript = yt_transcript_models.Transcript{

@@ -18,14 +18,14 @@ A Go library and CLI tool to get transcripts/subtitles from YouTube videos. This
 
 ```bash
 # Install the CLI tool
-go install github.com/horiagug/youtube-transcript-api-go/cmd/yt_transcript@latest
+go install github.com/palocortao/youtube-transcript-api-go/cmd/yt_transcript@latest
 ```
 
 ### As a Library
 
 ```bash
 # Add to your Go project
-go get github.com/horiagug/youtube-transcript-api-go
+go get github.com/palocortao/youtube-transcript-api-go
 ```
 
 ## CLI Usage
@@ -72,8 +72,8 @@ package main
 
 import (
     "fmt"
-	"github.com/horiagug/youtube-transcript-api-go/pkg/yt_transcript"
-	"github.com/horiagug/youtube-transcript-api-go/pkg/yt_transcript_formatters"
+	"github.com/palocortao/youtube-transcript-api-go/pkg/yt_transcript"
+	"github.com/palocortao/youtube-transcript-api-go/pkg/yt_transcript_formatters"
 )
 
 func main() {
