@@ -1,4 +1,4 @@
-module github.com/horiagug/youtube-transcript-api-go
+module github.com/palocortao/youtube-transcript-api-go
 
 go 1.26.0
 
